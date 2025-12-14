@@ -1,0 +1,9 @@
+{
+  "short_name": "WebGIS Du lịch",
+  "name": "WebGIS Du lịch An Giang",
+  "icons": [],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#0ea5e9",
+  "background_color": "#ffffff"
+}

@@ -1,0 +1,58 @@
+<!-- frontend/public/index.html -->
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Title -->
+    <title>WebGIS Du lịch An Giang</title>
+
+    <!-- App Icons / Manifest (Create React App compatible) -->
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <meta name="theme-color" content="#0ea5e9" />
+
+    <!-- SEO -->
+    <meta name="description" content="Hệ thống WebGIS du lịch An Giang: ranh giới, điểm du lịch, chợ, núi… hiển thị tương tác trên bản đồ." />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="WebGIS Du lịch An Giang" />
+    <meta property="og:description" content="Khám phá các lớp dữ liệu: điểm du lịch, chợ, núi, ranh giới… trên bản đồ tương tác." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="%PUBLIC_URL%/og-image.png" />
+    <meta property="og:url" content="/" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="WebGIS Du lịch An Giang" />
+    <meta name="twitter:description" content="Bản đồ WebGIS - dữ liệu du lịch An Giang." />
+    <meta name="twitter:image" content="%PUBLIC_URL%/og-image.png" />
+
+    <!-- Leaflet CSS (bắt buộc nếu dùng Leaflet/React-Leaflet) -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+
+    <!-- Reset nhỏ cho full-viewport app -->
+    <style>
+      html, body, #root {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        background: #f8fafc;
+        color: #0f172a;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>Bạn cần bật JavaScript để chạy ứng dụng này.</noscript>
+    <div id="root"></div>
+  </body>
+</html>
