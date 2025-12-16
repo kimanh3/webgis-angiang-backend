@@ -1,18 +1,15 @@
-// src/api/apiClient.js
+// frontend/src/api/apiClient.js
+// ✅ Render static site: luôn gọi thẳng backend (không dùng setupProxy)
 
-const BASE_URL =
-  (typeof process !== "undefined" && process.env && process.env.REACT_APP_API_BASE_URL) ||
-  (typeof import.meta !== "undefined" ? import.meta.env?.VITE_API_BASE_URL : "") ||
-  "";
+const BASE_URL = "https://webgis-angiang-backend-2.onrender.com"; // ✅ cố định
 
-// Key token mới + cũ
 const ADMIN_TOKEN_KEY = "adminToken";
 const ADMIN_TOKEN_KEY_LEGACY = "admin_token";
 
-// Kiểm tra token JWT dạng xxx.yyy.zzz
+// ---- helpers ----
 function isLikelyJwt(t) {
   if (!t || typeof t !== "string") return false;
-  const s = t.trim().replace(/^"+|"+$/g, ""); // bỏ dấu " nếu bị dính
+  const s = t.trim().replace(/^"+|"+$/g, "");
   return /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/.test(s);
 }
 
@@ -26,26 +23,31 @@ function getCleanToken() {
 
     if (!t) return null;
 
-    // trim + bỏ dấu quote nếu bị JSON stringify
     t = t.trim().replace(/^"+|"+$/g, "");
 
-    // nếu token không đúng dạng JWT => xóa luôn để tránh jwt malformed lặp lại
     if (!isLikelyJwt(t)) {
       window.localStorage.removeItem(ADMIN_TOKEN_KEY);
       window.localStorage.removeItem(ADMIN_TOKEN_KEY_LEGACY);
       return null;
     }
     return t;
-  } catch (_) {
+  } catch {
     return null;
   }
 }
 
+function buildUrl(path = "") {
+  if (/^https?:\/\//i.test(path)) return path;
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return BASE_URL.replace(/\/+$/, "") + p;
+}
+
 async function request(path, options = {}) {
-  const { method = "GET", data, headers: customHeaders = {} } = options;
+  const { method = "GET", data, headers: customHeaders = {}, timeoutMs = 30000 } = options;
+
+  const url = buildUrl(path);
   const headers = { ...customHeaders };
 
-  // AUTO gắn token admin (nếu có) và token hợp lệ
   const token = getCleanToken();
   if (token && !headers.Authorization && !headers.authorization) {
     headers.Authorization = `Bearer ${token}`;
@@ -55,37 +57,73 @@ async function request(path, options = {}) {
     headers["Content-Type"] = "application/json";
   }
 
-  const res = await fetch(BASE_URL + path, {
-    method,
-    headers,
-    body: data !== undefined ? JSON.stringify(data) : undefined,
-  });
+  // Timeout
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  const text = await res.text();
+  let res;
+  let text = "";
+  try {
+    res = await fetch(url, {
+      method,
+      headers,
+      body: data !== undefined ? JSON.stringify(data) : undefined,
+      signal: controller.signal,
+      // credentials: "include", // chỉ bật nếu backend dùng cookie
+    });
+    text = await res.text();
+  } catch (e) {
+    clearTimeout(timer);
+    const msg = e?.name === "AbortError" ? `Timeout ${timeoutMs}ms` : (e?.message || "Network error");
+    throw new Error(`API ${method} ${url} failed - ${msg}`);
+  } finally {
+    clearTimeout(timer);
+  }
+
+  // Nếu bị rewrite trả về index.html (HTML) -> báo rõ
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
+  const looksLikeHtml = ct.includes("text/html") || /^\s*</.test(text); // bắt trường hợp HTML
+  if (looksLikeHtml) {
+    // thường do FE gọi nhầm domain FE hoặc rule rewrite ăn vào /api
+    throw new Error(
+      `API ${method} ${url} returned HTML (likely rewrite to index.html). Check backend URL / Render rewrites.`
+    );
+  }
 
   if (!res.ok) {
-    let message = `API ${method} ${path} failed (${res.status})`;
+    let message = `API ${method} ${url} failed (${res.status})`;
     try {
       const json = JSON.parse(text || "{}");
       message = json.message || json.error || message;
       if (json.detail) message = `${message} - ${json.detail}`;
-    } catch (_) {
+    } catch {
       if (text) message = `${message} - ${text}`;
     }
     throw new Error(message);
   }
 
   if (!text) return null;
+
+  // Ưu tiên JSON
   try {
     return JSON.parse(text);
-  } catch (_) {
+  } catch {
     return text;
   }
 }
 
-export const apiGet = (path, options) => request(path, { ...(options || {}), method: "GET" });
-export const apiPost = (path, data, options) => request(path, { ...(options || {}), method: "POST", data });
-export const apiPut = (path, data, options) => request(path, { ...(options || {}), method: "PUT", data });
-export const apiDelete = (path, options) => request(path, { ...(options || {}), method: "DELETE" });
+// ---- exported helpers ----
+export const apiGet = (path, options) =>
+  request(path, { ...(options || {}), method: "GET" });
 
-export default { apiGet, apiPost, apiPut, apiDelete };
+export const apiPost = (path, data, options) =>
+  request(path, { ...(options || {}), method: "POST", data });
+
+export const apiPut = (path, data, options) =>
+  request(path, { ...(options || {}), method: "PUT", data });
+
+export const apiDelete = (path, options) =>
+  request(path, { ...(options || {}), method: "DELETE" });
+
+const apiClient = { apiGet, apiPost, apiPut, apiDelete };
+export default apiClient;
